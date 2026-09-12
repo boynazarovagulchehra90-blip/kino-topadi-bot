@@ -8,8 +8,8 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
+    "@vercel/kv": "^3.0.0",
     "dotenv": "^16.4.5",
     "grammy": "^1.30.0"
   }
 }
-
