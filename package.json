@@ -2,6 +2,7 @@
   "name": "kino-topadi-bot",
   "version": "1.0.0",
   "main": "api/index.js",
+  "type": "module",
   "dependencies": {
     "telegraf": "^4.16.3"
   }
