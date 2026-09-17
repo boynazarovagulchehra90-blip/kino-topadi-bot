@@ -78,11 +78,11 @@ bot.on(['channel_post', 'edited_channel_post'], async (ctx) => {
     
     // Xabarda video/document va caption (izoh) mavjudligini tekshiramiz
     if ((msg.video || msg.document) && msg.caption) {
-        // Izoh ichidan faqat raqamlardan iborat bo'lgan so'zni (kodni) qidiramiz
-        const match = msg.caption.match(/\b\d+\b/);
+        // Izoh ichidan "Kod: 123" yoki shunga o'xshash formatdagi raqamni qidiramiz
+        const match = msg.caption.match(/kod\s*:\s*(\d+)/i);
         
         if (match) {
-            const code = match[0];
+            const code = match[1];
             const messageId = msg.message_id;
             
             // Bazaga yozish (Local JSON)

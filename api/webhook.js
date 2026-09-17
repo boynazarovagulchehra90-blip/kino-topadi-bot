@@ -65,10 +65,10 @@ bot.on('channel_post', async (ctx) => {
     const msg = ctx.channelPost;
     
     if (msg.video && msg.caption) {
-        const match = msg.caption.match(/\b\d+\b/);
+        const match = msg.caption.match(/kod\s*:\s*(\d+)/i);
         
         if (match) {
-            const code = match[0];
+            const code = match[1];
             const messageId = msg.message_id;
             
             // database.json ga saqlash
