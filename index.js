@@ -1,33 +1,17 @@
 // .env faylidan muhit o'zgaruvchilarini yuklash
-require('dotenv').config();
+import 'dotenv/config';
 
-const { Bot, InlineKeyboard } = require('grammy');
-const fs = require('fs');
-const path = require('path');
+import { Bot, InlineKeyboard } from 'grammy';
+import { kv } from '@vercel/kv';
 
 // Bot ob'ektini yaratish
 const bot = new Bot(process.env.BOT_TOKEN);
 
+
 // Asosiy o'zgaruvchilar
 const CHANNEL_ID = process.env.CHANNEL_ID;
 const REQUIRED_CHANNEL = process.env.REQUIRED_CHANNEL;
-const DB_FILE = path.join(__dirname, 'database.json');
-
-// database.json fayli yo'q bo'lsa, uni yaratish
-if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({}));
-}
-
-// Bazadan ma'lumotlarni o'qish
-function getDatabase() {
-    const data = fs.readFileSync(DB_FILE);
-    return JSON.parse(data);
-}
-
-// Bazaga ma'lumotlarni saqlash
-function saveDatabase(data) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-}
+// Vercel KV ga ulanish uchun .env da KV_REST_API_URL va KV_REST_API_TOKEN bo'lishi kerak.
 
 // B) Majburiy obunani tekshiruvchi middleware / funksiya
 async function checkSubscription(ctx, next) {
@@ -80,11 +64,13 @@ bot.on('channel_post', async (ctx) => {
             const code = match[0];
             const messageId = msg.message_id;
             
-            // Bazaga yozish
-            const db = getDatabase();
-            db[code] = messageId;
-            saveDatabase(db);
-            console.log(`Yangi kino saqlandi: Kod = ${code}, Message ID = ${messageId}`);
+            // Bazaga yozish (Vercel KV ga)
+            try {
+                await kv.set(code, messageId);
+                console.log(`Yangi kino saqlandi: Kod = ${code}, Message ID = ${messageId}`);
+            } catch (err) {
+                console.error('KV ga saqlashda xato:', err);
+            }
         }
     }
 });
@@ -147,24 +133,28 @@ bot.on('message:text', checkSubscription, async (ctx) => {
         return ctx.reply('Iltimos, faqat raqamli kod yuboring.');
     }
     
-    // Bazadan kodni qidirish
-    const db = getDatabase();
-    const messageId = db[code];
-    
-    if (messageId) {
-        try {
-            // copyMessage orqali aynan kanaldan nusxalab foydalanuvchiga jo'natish
-            await ctx.api.copyMessage(
-                ctx.chat.id,        // Qabul qiluvchi (foydalanuvchi)
-                CHANNEL_ID,         // Manba kanal ID-si
-                messageId           // Xabar ID-si
-            );
-        } catch (error) {
-            console.error('Copy message error:', error);
-            await ctx.reply('Kinoni yuborishda xatolik yuz berdi. Ehtimol, kino kanaldan o\'chirib tashlangan.');
+    // Bazadan kodni qidirish (Vercel KV dan)
+    try {
+        const messageId = await kv.get(code);
+        
+        if (messageId) {
+            try {
+                // copyMessage orqali aynan kanaldan nusxalab foydalanuvchiga jo'natish
+                await ctx.api.copyMessage(
+                    ctx.chat.id,        // Qabul qiluvchi (foydalanuvchi)
+                    CHANNEL_ID,         // Manba kanal ID-si
+                    messageId           // Xabar ID-si
+                );
+            } catch (error) {
+                console.error('Copy message error:', error);
+                await ctx.reply('Kinoni yuborishda xatolik yuz berdi. Ehtimol, kino kanaldan o\'chirib tashlangan.');
+            }
+        } else {
+            await ctx.reply('Kechirasiz, bunday kod bilan kino topilmadi.');
         }
-    } else {
-        await ctx.reply('Kechirasiz, bunday kod bilan kino topilmadi.');
+    } catch (err) {
+        console.error('KV dan qidirishda xato:', err);
+        await ctx.reply('Ma\'lumotlar bazasi bilan xatolik yuz berdi.');
     }
 });
 
@@ -182,3 +172,16 @@ bot.start({
         console.log(`Bot muvaffaqiyatli ishga tushdi: @${botInfo.username}`);
     }
 });
+
+// Render uchun oddiy HTTP server (Web Service sifatida yuklash uchun kerak)
+import http from 'http';
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot ishlamoqda...');
+});
+
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+    console.log(`Web server port: ${PORT} da ishga tushdi.`);
+});
+

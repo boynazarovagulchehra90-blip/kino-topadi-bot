@@ -1,17 +1,19 @@
-import 'dotenv/config';
-import { Bot, InlineKeyboard } from 'grammy';
-import { kv } from '@vercel/kv';
+require('dotenv').config();
+const { Bot, InlineKeyboard } = require('grammy');
+const { kv } = require('@vercel/kv');
+
+const bot = new Bot(process.env.BOT_TOKEN);
 
 const CHANNEL_ID = process.env.CHANNEL_ID;
 const REQUIRED_CHANNEL = process.env.REQUIRED_CHANNEL;
 
-const bot = new Bot(process.env.BOT_TOKEN);
-
 async function checkSubscription(ctx, next) {
     if (!REQUIRED_CHANNEL) return next();
+    
     try {
         const userId = ctx.from.id;
         const member = await ctx.api.getChatMember(REQUIRED_CHANNEL, userId);
+        
         if (['member', 'administrator', 'creator'].includes(member.status)) {
             return next();
         } else {
@@ -73,6 +75,7 @@ bot.callbackQuery('check_sub', async (ctx) => {
 bot.command('start', async (ctx) => {
     await ctx.reply('Assalomu alaykum! Kino kodini yuboring va men sizga kinoni tashlab beraman.');
     
+    // Obunani shu yerda tekshiramiz
     if (REQUIRED_CHANNEL) {
         try {
             const userId = ctx.from.id;
@@ -130,7 +133,11 @@ bot.catch((err) => {
     console.error(err.error);
 });
 
-export default async (req, res) => {
+// Vercel Serverless Function uchun to'g'ridan-to'g'ri handleUpdate ishlatamiz
+// webhookCallback('express') ishlatilmaydi — Vercel req.header() metodini qo'llab-quvvatlamaydi
+
+module.exports = async function handler(req, res) {
+    // GET so'rovi: webhook o'rnatish yoki sog'liq tekshiruvi
     if (req.method === 'GET') {
         if (req.url && req.url.includes('/set-webhook')) {
             try {
@@ -152,8 +159,10 @@ export default async (req, res) => {
         return res.status(200).send('Bot is running... ✅');
     }
 
+    // POST so'rovi: Telegram webhook update
     if (req.method === 'POST') {
         try {
+            // req.body string bo'lishi mumkin (Vercel ba'zan parse qilmaydi)
             let update = req.body;
             if (typeof update === 'string') {
                 update = JSON.parse(update);
@@ -163,6 +172,7 @@ export default async (req, res) => {
                 return res.status(400).send('Bad Request: invalid update');
             }
 
+            // Express yoki middleware'siz to'g'ridan-to'g'ri handleUpdate chaqiramiz
             await bot.handleUpdate(update);
             return res.status(200).send('OK');
         } catch (err) {
@@ -171,5 +181,6 @@ export default async (req, res) => {
         }
     }
 
+    // Boshqa metodlar
     return res.status(405).send('Method Not Allowed');
 };

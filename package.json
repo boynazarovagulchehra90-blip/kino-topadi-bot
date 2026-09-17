@@ -1,9 +1,16 @@
 {
-  "name": "kino-topadi-bot",
+  "name": "telegram-movie-bot",
   "version": "1.0.0",
-  "main": "api/index.js",
+  "description": "Telegram kino boti",
+  "main": "index.js",
   "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
   "dependencies": {
-    "telegraf": "^4.16.3"
+    "@vercel/kv": "^3.0.0",
+    "dotenv": "^16.4.5",
+    "grammy": "^1.30.0"
   }
 }
