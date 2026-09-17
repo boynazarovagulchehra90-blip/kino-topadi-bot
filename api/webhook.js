@@ -30,6 +30,22 @@ async function getFromDB(code) {
     return db[code];
 }
 
+function extractVideoCode(caption) {
+    if (!caption || typeof caption !== 'string') return null;
+
+    const patterns = [
+        /(?:^|\s|\n)(?:kod|code|kino)\s*[:\-]?\s*(\d{3,})\b/i,
+        /(?:^|\n)\s*(\d{3,})\s*(?:\n|$)/
+    ];
+
+    for (const pattern of patterns) {
+        const match = caption.match(pattern);
+        if (match) return match[1];
+    }
+
+    return null;
+}
+
 async function checkSubscription(ctx, next) {
     if (!REQUIRED_CHANNEL) return next();
     
@@ -59,18 +75,17 @@ async function checkSubscription(ctx, next) {
     }
 }
 
-bot.on('channel_post', async (ctx) => {
-    if (ctx.channelPost.chat.id.toString() !== CHANNEL_ID) return;
-
-    const msg = ctx.channelPost;
+bot.on(['channel_post', 'edited_channel_post'], async (ctx) => {
+    const msg = ctx.channelPost || ctx.editedChannelPost;
+    
+    if (msg.chat.id.toString() !== CHANNEL_ID) return;
     
     if (msg.video && msg.caption) {
-        const match = msg.caption.match(/kod\s*:\s*(\d+)/i);
-        
-        if (match) {
-            const code = match[1];
+        const code = extractVideoCode(msg.caption);
+
+        if (code) {
             const messageId = msg.message_id;
-            
+
             // database.json ga saqlash
             await saveToDB(code, messageId);
             console.log(`Yangi kino saqlandi: Kod = ${code}, Message ID = ${messageId}`);

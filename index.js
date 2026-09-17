@@ -29,6 +29,21 @@ async function getFromDB(code) {
     return db[code];
 }
 
+function extractVideoCode(caption) {
+    if (!caption || typeof caption !== 'string') return null;
+
+    const patterns = [
+        /(?:^|\s|\n)(?:kod|code|kino)\s*[:\-]?\s*(\d{3,})\b/i,
+        /(?:^|\n)\s*(\d{3,})\s*(?:\n|$)/
+    ];
+
+    for (const pattern of patterns) {
+        const match = caption.match(pattern);
+        if (match) return match[1];
+    }
+
+    return null;
+}
 
 // Asosiy o'zgaruvchilar
 const CHANNEL_ID = process.env.CHANNEL_ID;
@@ -78,13 +93,11 @@ bot.on(['channel_post', 'edited_channel_post'], async (ctx) => {
     
     // Xabarda video/document va caption (izoh) mavjudligini tekshiramiz
     if ((msg.video || msg.document) && msg.caption) {
-        // Izoh ichidan "Kod: 123" yoki shunga o'xshash formatdagi raqamni qidiramiz
-        const match = msg.caption.match(/kod\s*:\s*(\d+)/i);
-        
-        if (match) {
-            const code = match[1];
+        const code = extractVideoCode(msg.caption);
+
+        if (code) {
             const messageId = msg.message_id;
-            
+
             // Bazaga yozish (Local JSON)
             try {
                 await saveToDB(code, messageId);
