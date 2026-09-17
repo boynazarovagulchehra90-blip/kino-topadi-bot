@@ -32,14 +32,23 @@ async function getFromDB(code) {
 function extractVideoCode(caption) {
     if (!caption || typeof caption !== 'string') return null;
 
-    const patterns = [
-        /(?:^|\s|\n)(?:kod|code|kino)\s*[:\-]?\s*(\d{3,})\b/i,
-        /(?:^|\n)\s*(\d{3,})\s*(?:\n|$)/
+    const clean = caption.trim();
+    if (!clean) return null;
+
+    const explicitPatterns = [
+        /(?:^|\s|\n)(?:kod|code|kino)\s*[:\-]?\s*(\d{2,})\b/i,
+        /(?:^|\s|\n)(?:id|number)\s*[:\-]?\s*(\d{2,})\b/i,
+        /(?:^|\n)\s*(\d{2,})\s*(?:\n|$|[.,!?;])/
     ];
 
-    for (const pattern of patterns) {
-        const match = caption.match(pattern);
+    for (const pattern of explicitPatterns) {
+        const match = clean.match(pattern);
         if (match) return match[1];
+    }
+
+    const numbers = [...clean.matchAll(/\d{2,}/g)].map((m) => m[0]);
+    if (numbers.length > 0) {
+        return numbers[numbers.length - 1];
     }
 
     return null;
