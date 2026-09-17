@@ -1,11 +1,34 @@
 require('dotenv').config();
 const { Bot, InlineKeyboard } = require('grammy');
-const { kv } = require('@vercel/kv');
+const fs = require('fs/promises');
+const path = require('path');
 
 const bot = new Bot(process.env.BOT_TOKEN);
 
 const CHANNEL_ID = process.env.CHANNEL_ID;
 const REQUIRED_CHANNEL = process.env.REQUIRED_CHANNEL;
+
+const DB_PATH = path.join(process.cwd(), 'database.json');
+
+async function getDB() {
+    try {
+        const data = await fs.readFile(DB_PATH, 'utf-8');
+        return JSON.parse(data);
+    } catch (err) {
+        return {};
+    }
+}
+
+async function saveToDB(code, messageId) {
+    const db = await getDB();
+    db[code] = messageId;
+    await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2));
+}
+
+async function getFromDB(code) {
+    const db = await getDB();
+    return db[code];
+}
 
 async function checkSubscription(ctx, next) {
     if (!REQUIRED_CHANNEL) return next();
@@ -48,8 +71,8 @@ bot.on('channel_post', async (ctx) => {
             const code = match[0];
             const messageId = msg.message_id;
             
-            // Vercel KV ga saqlash
-            await kv.set(code, messageId);
+            // database.json ga saqlash
+            await saveToDB(code, messageId);
             console.log(`Yangi kino saqlandi: Kod = ${code}, Message ID = ${messageId}`);
         }
     }
@@ -108,8 +131,8 @@ bot.on('message:text', checkSubscription, async (ctx) => {
         return ctx.reply('Iltimos, faqat raqamli kod yuboring.');
     }
     
-    // Vercel KV dan o'qish
-    const messageId = await kv.get(code);
+    // database.json dan o'qish
+    const messageId = await getFromDB(code);
     
     if (messageId) {
         try {

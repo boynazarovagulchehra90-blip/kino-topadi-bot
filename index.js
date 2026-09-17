@@ -2,16 +2,37 @@
 import 'dotenv/config';
 
 import { Bot, InlineKeyboard } from 'grammy';
-import { kv } from '@vercel/kv';
-
+import fs from 'fs/promises';
 // Bot ob'ektini yaratish
 const bot = new Bot(process.env.BOT_TOKEN);
+
+// DB funksiyalari
+const DB_PATH = './database.json';
+
+async function getDB() {
+    try {
+        const data = await fs.readFile(DB_PATH, 'utf-8');
+        return JSON.parse(data);
+    } catch (err) {
+        return {};
+    }
+}
+
+async function saveToDB(code, messageId) {
+    const db = await getDB();
+    db[code] = messageId;
+    await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2));
+}
+
+async function getFromDB(code) {
+    const db = await getDB();
+    return db[code];
+}
 
 
 // Asosiy o'zgaruvchilar
 const CHANNEL_ID = process.env.CHANNEL_ID;
 const REQUIRED_CHANNEL = process.env.REQUIRED_CHANNEL;
-// Vercel KV ga ulanish uchun .env da KV_REST_API_URL va KV_REST_API_TOKEN bo'lishi kerak.
 
 // B) Majburiy obunani tekshiruvchi middleware / funksiya
 async function checkSubscription(ctx, next) {
@@ -49,14 +70,14 @@ async function checkSubscription(ctx, next) {
 }
 
 // A) Auto-Indexing (Kanal postlarini ushlash)
-bot.on('channel_post', async (ctx) => {
-    // Agar xabar bizning kino kanalidan kelmagan bo'lsa, e'tibor bermaymiz
-    if (ctx.channelPost.chat.id.toString() !== CHANNEL_ID) return;
-
-    const msg = ctx.channelPost;
+bot.on(['channel_post', 'edited_channel_post'], async (ctx) => {
+    const msg = ctx.channelPost || ctx.editedChannelPost;
     
-    // Xabarda video va caption (izoh) mavjudligini tekshiramiz
-    if (msg.video && msg.caption) {
+    // Agar xabar bizning kino kanalidan kelmagan bo'lsa, e'tibor bermaymiz
+    if (msg.chat.id.toString() !== CHANNEL_ID) return;
+    
+    // Xabarda video/document va caption (izoh) mavjudligini tekshiramiz
+    if ((msg.video || msg.document) && msg.caption) {
         // Izoh ichidan faqat raqamlardan iborat bo'lgan so'zni (kodni) qidiramiz
         const match = msg.caption.match(/\b\d+\b/);
         
@@ -64,16 +85,17 @@ bot.on('channel_post', async (ctx) => {
             const code = match[0];
             const messageId = msg.message_id;
             
-            // Bazaga yozish (Vercel KV ga)
+            // Bazaga yozish (Local JSON)
             try {
-                await kv.set(code, messageId);
+                await saveToDB(code, messageId);
                 console.log(`Yangi kino saqlandi: Kod = ${code}, Message ID = ${messageId}`);
             } catch (err) {
-                console.error('KV ga saqlashda xato:', err);
+                console.error('Bazaga saqlashda xato:', err);
             }
         }
     }
 });
+
 
 // "Tekshirish" tugmasi bosilganda ishlovchi handler
 bot.callbackQuery('check_sub', async (ctx) => {
@@ -133,9 +155,9 @@ bot.on('message:text', checkSubscription, async (ctx) => {
         return ctx.reply('Iltimos, faqat raqamli kod yuboring.');
     }
     
-    // Bazadan kodni qidirish (Vercel KV dan)
+    // Bazadan kodni qidirish (Local JSON dan)
     try {
-        const messageId = await kv.get(code);
+        const messageId = await getFromDB(code);
         
         if (messageId) {
             try {
@@ -143,7 +165,7 @@ bot.on('message:text', checkSubscription, async (ctx) => {
                 await ctx.api.copyMessage(
                     ctx.chat.id,        // Qabul qiluvchi (foydalanuvchi)
                     CHANNEL_ID,         // Manba kanal ID-si
-                    messageId           // Xabar ID-si
+                    messageId           // Xabar ID-si (Kino kodi)
                 );
             } catch (error) {
                 console.error('Copy message error:', error);
@@ -153,7 +175,7 @@ bot.on('message:text', checkSubscription, async (ctx) => {
             await ctx.reply('Kechirasiz, bunday kod bilan kino topilmadi.');
         }
     } catch (err) {
-        console.error('KV dan qidirishda xato:', err);
+        console.error('Baza bilan ishlashda xato:', err);
         await ctx.reply('Ma\'lumotlar bazasi bilan xatolik yuz berdi.');
     }
 });
