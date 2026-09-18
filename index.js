@@ -1,8 +1,10 @@
-// .env faylidan muhit o'zgaruvchilarini yuklash
-import 'dotenv/config';
+// 1-qatorda shunday bo'lishi kerak:
+require('dotenv').config();
 
-import { Bot, InlineKeyboard } from 'grammy';
-import fs from 'fs/promises';
+const { Telegraf } = require('telegraf');
+const express = require('express');
+const axios = require('axios');
+
 // Bot ob'ektini yaratish
 const bot = new Bot(process.env.BOT_TOKEN);
 
