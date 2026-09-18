@@ -229,3 +229,13 @@ server.listen(PORT, () => {
     console.log(`Web server port: ${PORT} da ishga tushdi.`);
 });
 
+const RENDER_URL = 'https://kino-topadi-bot-2.onrender.com'; // O'zingizning URL-manzilingizni qo'ying
+
+setInterval(async () => {
+    try {
+        await fetch(RENDER_URL);
+        console.log('Keep-alive ping muvaffaqiyatli yuborildi');
+    } catch (err) {
+        console.error('Ping xatoligi:', err.message);
+    }
+}, 10 * 60 * 1000); // Har 10 daqiqada
