@@ -34,14 +34,23 @@ bot.action('check_sub', async (ctx) => {
 });
 
 // Xabarlarni tutib olish va ishlov berish
+// Oddiy namuna (agar kinolar ob'ektda saqlangan bo'lsa):
+const movies = {
+    '1': { title: 'Forsaj 10', file_id: 'BAACAgIAAxkBAA...' },
+    '2': { title: 'Avatar 2', file_id: 'BAACAgIAAxkBAA...' }
+};
+
 bot.on('text', async (ctx) => {
-  try {
-    const text = ctx.message.text;
-    // Shu yerga botingizning asosiy mantiqiy kodini joylaysiz
-    await ctx.reply(`Siz yuborgan matn: ${text}`);
-  } catch (error) {
-    console.error('Xabar qayta ishlashda xatolik:', error);
-  }
+    const code = ctx.message.text.trim(); // Foydalanuvchi yuborgan kod (masalan "1")
+
+    if (movies[code]) {
+        // Agar kino topilsa
+        await ctx.reply(`🎬 Kino: ${movies[code].title}`);
+        // await ctx.replyWithVideo(movies[code].file_id); // Video yuborish uchun
+    } else {
+        // Agar bunday kodli kino topilmasa
+        await ctx.reply("❌ Bunday kodli kino topilmadi. Qaytadan urinib ko'ring.");
+    }
 });
 
 // Botni ishga tushirish
