@@ -2,8 +2,10 @@
 import 'dotenv/config';
 
 import { Telegraf } from 'telegraf';
-const express = require('express');
-const axios = require('axios');
+import express from 'express';
+import axios from 'axios';
+
+
 
 // Bot ob'ektini yaratish
 const bot = new Bot(process.env.BOT_TOKEN);
