@@ -121,7 +121,12 @@ bot.on(['channel_post', 'edited_channel_post'], async (ctx) => {
 
 // "Tekshirish" tugmasi bosilganda ishlovchi handler
 bot.action('check_sub', async (ctx) => {
-    // ...
+    await ctx.answerCbQuery();
+    try {
+        // Asosiy kod bu yerda
+    } catch (error) {
+        console.error("Xatolik:", error);
+    }
 });
         const userId = ctx.from.id;
         const member = await ctx.api.getChatMember(REQUIRED_CHANNEL, userId);
