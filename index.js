@@ -6,9 +6,32 @@ import path from 'path';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const SOURCE_CHANNEL_ID = process.env.CHANNEL_ID;
+
+if (!BOT_TOKEN) {
+  throw new Error('BOT_TOKEN topilmadi. .env faylida BOT_TOKEN o\'rnating.');
+}
+
+const bot = new Telegraf(BOT_TOKEN);
 const DB_PATH = path.join(process.cwd(), 'database.json');
 const pendingSave = new Map();
+const channelPendingSave = new Map();
+
+function extractCodeFromText(text) {
+  if (!text || typeof text !== 'string') return null;
+
+  const raw = text.trim();
+  if (!raw) return null;
+
+  const match = raw.match(/(?:kod|code|kino)\s*[:\-]?\s*(\d+|[a-zA-Z0-9\s-]{2,})/i);
+  if (match) return match[1].trim();
+
+  const numbers = [...raw.matchAll(/\d+/g)].map((n) => n[0]);
+  if (numbers.length > 0) return numbers[numbers.length - 1];
+
+  return raw;
+}
 
 app.get('/', (req, res) => {
   res.send('Bot muvaffaqiyatli ishlayapti!');
@@ -48,7 +71,45 @@ async function getMovieByKey(key) {
 }
 
 bot.start((ctx) => {
-  ctx.reply('Xush kelibsiz! Kino qidirish uchun raqam yoki istalgan nomni yozing. Kino saqlash uchun video/document yuboring.');
+  ctx.reply('Xush kelibsiz! Kino qidirish uchun raqam yoki istalgan nomni yozing. Kino saqlash uchun video/document yuboring yoki /save 101 deb yozing.');
+});
+
+bot.command('save', async (ctx) => {
+  const args = ctx.message.text.split(/\s+/).slice(1);
+  const key = args[0];
+  const reply = ctx.message.reply_to_message;
+
+  if (!key) {
+    await ctx.reply('Namuna: /save 101 yoki /save sherlok');
+    return;
+  }
+
+  if (!reply || (!reply.video && !reply.document)) {
+    await ctx.reply('Iltimos, video yoki faylga javob berib /save 101 yozing.');
+    return;
+  }
+
+  await saveMovieByKey(key, reply.message_id);
+  await ctx.reply(`✅ Kino "${key}" kodi saqlandi.`);
+});
+
+bot.command('kod', async (ctx) => {
+  const args = ctx.message.text.split(/\s+/).slice(1);
+  const key = args[0];
+  const reply = ctx.message.reply_to_message;
+
+  if (!key) {
+    await ctx.reply('Namuna: /kod 101');
+    return;
+  }
+
+  if (!reply || (!reply.video && !reply.document)) {
+    await ctx.reply('Iltimos, video yoki faylga javob berib /kod 101 yozing.');
+    return;
+  }
+
+  await saveMovieByKey(key, reply.message_id);
+  await ctx.reply(`✅ Kino "${key}" kodi saqlandi.`);
 });
 
 bot.on(['video', 'document'], async (ctx) => {
@@ -62,7 +123,23 @@ bot.on(['video', 'document'], async (ctx) => {
     type: message.video ? 'video' : 'document',
   });
 
-  await ctx.reply('Bu kinoni bazada qaysi raqam yoki so\'z bilan saqlamoqchisiz? Masalan: 101 yoki "sherlok"');
+  await ctx.reply('Bu kinoni bazada qaysi raqam yoki so\'z bilan saqlamoqchisiz? Masalan: 101 yoki "sherlok". Agar kanalga allaqachon qo\'yilgan video bo\'lsa, /save 101 deb yozing.');
+});
+
+bot.on('channel_post', async (ctx) => {
+  const post = ctx.channelPost;
+  if (!post || (!post.video && !post.document)) return;
+
+  const code = extractCodeFromText(post.caption);
+  if (code) {
+    await saveMovieByKey(code, post.message_id);
+    await ctx.telegram.sendMessage(post.chat.id, `✅ Kino kodi saqlandi: ${code}`);
+    return;
+  }
+
+  const key = `${post.chat.id}:${post.message_id}`;
+  channelPendingSave.set(key, post.message_id);
+  await ctx.telegram.sendMessage(post.chat.id, 'Bu videoning kodi keyinchalik /save 101 yoki /kod 101 bilan biriktiriladi.');
 });
 
 bot.on('text', async (ctx) => {
@@ -85,6 +162,24 @@ bot.on('text', async (ctx) => {
     return;
   }
 
+  if (text.startsWith('/save ') || text.startsWith('/kod ')) {
+    const key = text.split(/\s+/).slice(1).join(' ').trim();
+    if (!key) {
+      await ctx.reply('Namuna: /save 101');
+      return;
+    }
+
+    const reply = ctx.message.reply_to_message;
+    if (!reply || (!reply.video && !reply.document)) {
+      await ctx.reply('Iltimos, video yoki faylga javob berib /save 101 yozing.');
+      return;
+    }
+
+    await saveMovieByKey(key, reply.message_id);
+    await ctx.reply(`✅ Kino "${key}" kodi saqlandi.`);
+    return;
+  }
+
   if (!text) return;
 
   const messageId = await getMovieByKey(text);
@@ -93,7 +188,12 @@ bot.on('text', async (ctx) => {
     return;
   }
 
-  const sourceChatId = process.env.CHANNEL_ID || ctx.chat.id;
+  const sourceChatId = SOURCE_CHANNEL_ID || ctx.chat.id;
+
+  if (!SOURCE_CHANNEL_ID) {
+    await ctx.reply('CHANNEL_ID o\'rnatilmagan. .env faylida CHANNEL_ID ni yozing yoki botga kanal ID kiriting.');
+    return;
+  }
 
   try {
     await ctx.telegram.copyMessage(ctx.chat.id, sourceChatId, Number(messageId));
