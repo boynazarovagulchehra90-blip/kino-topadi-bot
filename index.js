@@ -55,9 +55,30 @@ async function writeDB(data) {
   await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2));
 }
 
+function normalizeMovieKey(key) {
+  if (key === null || key === undefined) return null;
+
+  const text = String(key).trim();
+  if (!text) return null;
+
+  const explicit = text.match(/(?:^|\s|[\W_])(?:kod|code|kino|film|movie)\s*[:\-]?\s*([a-zA-Z0-9\-\s]{1,50})/i);
+  if (explicit && explicit[1]) {
+    const cleaned = explicit[1].trim();
+    if (cleaned) return cleaned;
+  }
+
+  const plain = text.replace(/^(?:kod|code|kino|film|movie)\s*[:\-]?\s*/i, '').trim();
+  if (plain) return plain;
+
+  const digits = text.match(/\d+/g);
+  if (digits && digits.length > 0) return digits[digits.length - 1];
+
+  return text;
+}
+
 async function saveMovieByKey(key, messageId) {
   const db = await readDB();
-  const cleanedKey = String(key).trim();
+  const cleanedKey = normalizeMovieKey(key);
   if (!cleanedKey) return;
 
   db[cleanedKey] = Number(messageId);
@@ -66,8 +87,10 @@ async function saveMovieByKey(key, messageId) {
 
 async function getMovieByKey(key) {
   const db = await readDB();
-  const cleanedKey = String(key).trim();
-  return cleanedKey ? db[cleanedKey] : undefined;
+  const cleanedKey = normalizeMovieKey(key);
+  if (!cleanedKey) return undefined;
+
+  return db[cleanedKey] ?? db[String(cleanedKey)] ?? undefined;
 }
 
 bot.start((ctx) => {
@@ -76,7 +99,7 @@ bot.start((ctx) => {
 
 bot.command('save', async (ctx) => {
   const args = ctx.message.text.split(/\s+/).slice(1);
-  const key = args[0];
+  const key = normalizeMovieKey(args.join(' '));
   const reply = ctx.message.reply_to_message;
 
   if (!key) {
@@ -95,7 +118,7 @@ bot.command('save', async (ctx) => {
 
 bot.command('kod', async (ctx) => {
   const args = ctx.message.text.split(/\s+/).slice(1);
-  const key = args[0];
+  const key = normalizeMovieKey(args.join(' '));
   const reply = ctx.message.reply_to_message;
 
   if (!key) {
@@ -130,7 +153,7 @@ bot.on('channel_post', async (ctx) => {
   const post = ctx.channelPost;
   if (!post || (!post.video && !post.document)) return;
 
-  const code = extractCodeFromText(post.caption);
+  const code = normalizeMovieKey(post.caption || '');
   if (code) {
     await saveMovieByKey(code, post.message_id);
     await ctx.telegram.sendMessage(post.chat.id, `✅ Kino kodi saqlandi: ${code}`);
@@ -142,13 +165,24 @@ bot.on('channel_post', async (ctx) => {
   await ctx.telegram.sendMessage(post.chat.id, 'Bu videoning kodi keyinchalik /save 101 yoki /kod 101 bilan biriktiriladi.');
 });
 
+bot.on('edited_channel_post', async (ctx) => {
+  const post = ctx.editedChannelPost;
+  if (!post || (!post.video && !post.document)) return;
+
+  const code = normalizeMovieKey(post.caption || '');
+  if (code) {
+    await saveMovieByKey(code, post.message_id);
+    await ctx.telegram.sendMessage(post.chat.id, `✅ Kino kodi yangilandi: ${code}`);
+  }
+});
+
 bot.on('text', async (ctx) => {
   const text = ctx.message.text.trim();
   const chatId = String(ctx.chat.id);
 
   const saveInfo = pendingSave.get(chatId);
   if (saveInfo) {
-    const key = text.replace(/\s+/g, ' ').trim();
+    const key = normalizeMovieKey(text);
 
     if (!key) {
       await ctx.reply('Iltimos, saqlash uchun raqam yoki istalgan nom yozing.');
@@ -163,7 +197,7 @@ bot.on('text', async (ctx) => {
   }
 
   if (text.startsWith('/save ') || text.startsWith('/kod ')) {
-    const key = text.split(/\s+/).slice(1).join(' ').trim();
+    const key = normalizeMovieKey(text.split(/\s+/).slice(1).join(' '));
     if (!key) {
       await ctx.reply('Namuna: /save 101');
       return;
