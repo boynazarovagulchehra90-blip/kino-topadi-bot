@@ -120,8 +120,9 @@ bot.on(['channel_post', 'edited_channel_post'], async (ctx) => {
 
 
 // "Tekshirish" tugmasi bosilganda ishlovchi handler
-bot.callbackQuery('check_sub', async (ctx) => {
-    try {
+bot.action('check_sub', async (ctx) => {
+    // ...
+});
         const userId = ctx.from.id;
         const member = await ctx.api.getChatMember(REQUIRED_CHANNEL, userId);
         
