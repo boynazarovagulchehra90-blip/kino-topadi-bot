@@ -1,5 +1,5 @@
 // 1-qatorda shunday bo'lishi kerak:
-require('dotenv').config();
+import 'dotenv/config';
 
 const { Telegraf } = require('telegraf');
 const express = require('express');
