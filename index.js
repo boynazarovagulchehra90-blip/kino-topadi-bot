@@ -1,7 +1,7 @@
 // 1-qatorda shunday bo'lishi kerak:
 import 'dotenv/config';
 
-const { Telegraf } = require('telegraf');
+import { Telegraf } from 'telegraf';
 const express = require('express');
 const axios = require('axios');
 
