@@ -1,14 +1,10 @@
 // 1-qatorda shunday bo'lishi kerak:
 import 'dotenv/config';
-
 import { Telegraf } from 'telegraf';
 import express from 'express';
 import axios from 'axios';
 
-
-
-// Bot ob'ektini yaratish
-const bot = new Bot(process.env.BOT_TOKEN);
+const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // DB funksiyalari
 const DB_PATH = './database.json';
