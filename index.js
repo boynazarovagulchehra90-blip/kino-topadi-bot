@@ -87,10 +87,13 @@ function normalizeMovieKey(key) {
 async function saveMovieByKey(key, messageId) {
   const db = await readDB();
   const cleanedKey = normalizeMovieKey(key);
-  if (!cleanedKey) return;
+  if (!cleanedKey) return false;
+
+  if (db[cleanedKey] !== undefined) return false;
 
   db[cleanedKey] = Number(messageId);
   await writeDB(db);
+  return true;
 }
 
 async function getMovieByKey(key) {
@@ -120,8 +123,12 @@ bot.command('save', async (ctx) => {
     return;
   }
 
-  await saveMovieByKey(key, reply.message_id);
-  await ctx.reply(`✅ Kino "${key}" kodi saqlandi.`);
+  const saved = await saveMovieByKey(key, reply.message_id);
+  if (saved) {
+    await ctx.reply(`✅ Kino "${key}" kodi saqlandi.`);
+  } else {
+    await ctx.reply(`⚠️ "${key}" kodi avvaldan mavjud. Bir xil kodni qayta saqlamayman.`);
+  }
 });
 
 bot.command('kod', async (ctx) => {
@@ -139,8 +146,12 @@ bot.command('kod', async (ctx) => {
     return;
   }
 
-  await saveMovieByKey(key, reply.message_id);
-  await ctx.reply(`✅ Kino "${key}" kodi saqlandi.`);
+  const saved = await saveMovieByKey(key, reply.message_id);
+  if (saved) {
+    await ctx.reply(`✅ Kino "${key}" kodi saqlandi.`);
+  } else {
+    await ctx.reply(`⚠️ "${key}" kodi avvaldan mavjud. Bir xil kodni qayta saqlamayman.`);
+  }
 });
 
 bot.on(['video', 'document'], async (ctx) => {
@@ -163,8 +174,12 @@ bot.on('channel_post', async (ctx) => {
 
   const code = normalizeMovieKey(post.caption || '');
   if (code) {
-    await saveMovieByKey(code, post.message_id);
-    await ctx.telegram.sendMessage(post.chat.id, `✅ Kino kodi saqlandi: ${code}`);
+    const saved = await saveMovieByKey(code, post.message_id);
+    if (saved) {
+      await ctx.telegram.sendMessage(post.chat.id, `✅ Kino kodi saqlandi: ${code}`);
+    } else {
+      await ctx.telegram.sendMessage(post.chat.id, `⚠️ Bu kod allaqachon mavjud: ${code}`);
+    }
     return;
   }
 
@@ -179,8 +194,12 @@ bot.on('edited_channel_post', async (ctx) => {
 
   const code = normalizeMovieKey(post.caption || '');
   if (code) {
-    await saveMovieByKey(code, post.message_id);
-    await ctx.telegram.sendMessage(post.chat.id, `✅ Kino kodi yangilandi: ${code}`);
+    const saved = await saveMovieByKey(code, post.message_id);
+    if (saved) {
+      await ctx.telegram.sendMessage(post.chat.id, `✅ Kino kodi saqlandi: ${code}`);
+    } else {
+      await ctx.telegram.sendMessage(post.chat.id, `⚠️ Bu kod allaqachon mavjud: ${code}`);
+    }
   }
 });
 
@@ -197,10 +216,14 @@ bot.on('text', async (ctx) => {
       return;
     }
 
-    await saveMovieByKey(key, saveInfo.messageId);
+    const saved = await saveMovieByKey(key, saveInfo.messageId);
     pendingSave.delete(chatId);
 
-    await ctx.reply(`✅ Kino "${key}" nomi bilan bazaga saqlandi.`);
+    if (saved) {
+      await ctx.reply(`✅ Kino "${key}" nomi bilan bazaga saqlandi.`);
+    } else {
+      await ctx.reply(`⚠️ "${key}" kodi avvaldan mavjud. Bir xil kodni qayta saqlamayman.`);
+    }
     return;
   }
 
@@ -217,8 +240,12 @@ bot.on('text', async (ctx) => {
       return;
     }
 
-    await saveMovieByKey(key, reply.message_id);
-    await ctx.reply(`✅ Kino "${key}" kodi saqlandi.`);
+    const saved = await saveMovieByKey(key, reply.message_id);
+    if (saved) {
+      await ctx.reply(`✅ Kino "${key}" kodi saqlandi.`);
+    } else {
+      await ctx.reply(`⚠️ "${key}" kodi avvaldan mavjud. Bir xil kodni qayta saqlamayman.`);
+    }
     return;
   }
 

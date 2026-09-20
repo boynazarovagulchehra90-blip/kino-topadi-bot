@@ -21,8 +21,10 @@ async function getDB() {
 
 async function saveToDB(code, messageId) {
     const db = await getDB();
+    if (db[code] !== undefined) return false;
     db[code] = messageId;
     await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2));
+    return true;
 }
 
 async function getFromDB(code) {
@@ -49,6 +51,13 @@ function extractVideoCode(caption) {
             const numbers = [...String(value).matchAll(/\d+/g)].map((m) => m[0]);
             if (numbers.length > 0) return numbers[numbers.length - 1];
         }
+    }
+
+    const numbers = [...clean.matchAll(/\d{2,}/g)].map((m) => m[0]);
+    if (numbers.length > 0) {
+        return numbers[numbers.length - 1];
+    }
+
     return null;
 }
 
@@ -92,9 +101,12 @@ bot.on(['channel_post', 'edited_channel_post'], async (ctx) => {
         if (code) {
             const messageId = msg.message_id;
 
-            // database.json ga saqlash
-            await saveToDB(code, messageId);
-            console.log(`Yangi kino saqlandi: Kod = ${code}, Message ID = ${messageId}`);
+            const saved = await saveToDB(code, messageId);
+            if (saved) {
+                console.log(`Yangi kino saqlandi: Kod = ${code}, Message ID = ${messageId}`);
+            } else {
+                console.log(`Takroriy kod qoldirildi: ${code}`);
+            }
         }
     }
 });
