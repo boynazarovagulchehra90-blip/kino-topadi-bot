@@ -18,14 +18,24 @@ const DB_PATH = path.join(process.cwd(), 'database.json');
 const pendingSave = new Map();
 const channelPendingSave = new Map();
 
+function extractDigitsFromText(text) {
+  if (!text || typeof text !== 'string') return null;
+
+  const numbers = [...String(text).matchAll(/\d+/g)].map((n) => n[0]);
+  return numbers.length > 0 ? numbers[numbers.length - 1] : null;
+}
+
 function extractCodeFromText(text) {
   if (!text || typeof text !== 'string') return null;
 
   const raw = text.trim();
   if (!raw) return null;
 
-  const match = raw.match(/(?:kod|code|kino)\s*[:\-]?\s*(\d+|[a-zA-Z0-9\s-]{2,})/i);
-  if (match) return match[1].trim();
+  const match = raw.match(/(?:kod|code|kino|film|movie|kanal|channel|kanalim)\s*[:\-]?\s*([a-zA-Z0-9\s\-]{1,80})/i);
+  if (match) {
+    const digits = extractDigitsFromText(match[1]);
+    if (digits) return digits;
+  }
 
   const numbers = [...raw.matchAll(/\d+/g)].map((n) => n[0]);
   if (numbers.length > 0) return numbers[numbers.length - 1];
@@ -61,14 +71,16 @@ function normalizeMovieKey(key) {
   const text = String(key).trim();
   if (!text) return null;
 
-  const explicit = text.match(/(?:^|\s|[\W_])(?:kod|code|kino|film|movie)\s*[:\-]?\s*([a-zA-Z0-9\-\s]{1,50})/i);
+  const explicit = text.match(/(?:^|\s|[\W_])(?:kod|code|kino|film|movie|kanal|channel|kanalim)\s*[:\-]?\s*([a-zA-Z0-9\-\s]{1,80})/i);
   if (explicit && explicit[1]) {
-    const cleaned = explicit[1].trim();
-    if (/^\d+$/.test(cleaned)) return cleaned;
-    return null;
+    const digits = extractDigitsFromText(explicit[1]);
+    if (digits) return digits;
   }
 
-  const plain = text.replace(/^(?:kod|code|kino|film|movie)\s*[:\-]?\s*/i, '').trim();
+  const plain = text.replace(/^(?:kod|code|kino|film|movie|kanal|channel|kanalim)\s*[:\-]?\s*/i, '').trim();
+  const plainDigits = extractDigitsFromText(plain);
+  if (plainDigits) return plainDigits;
+
   return /^\d+$/.test(plain) ? plain : null;
 }
 

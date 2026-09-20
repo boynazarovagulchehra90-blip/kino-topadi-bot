@@ -37,21 +37,18 @@ function extractVideoCode(caption) {
     if (!clean) return null;
 
     const explicitPatterns = [
-        /(?:^|\s|\n)(?:kod|code|kino)\s*[:\-]?\s*(\d{2,})\b/i,
+        /(?:^|\s|\n)(?:kod|code|kino|film|movie|kanal|channel|kanalim)\s*[:\-]?\s*([a-zA-Z0-9\-\s]{1,80})/i,
         /(?:^|\s|\n)(?:id|number)\s*[:\-]?\s*(\d{2,})\b/i,
-        /(?:^|\n)\s*(\d{2,})\s*(?:\n|$|[.,!?;])/
+        /(?:^|\n)\s*(\d{2,})\s*(?:\n|$|[.,!?;])/ 
     ];
 
     for (const pattern of explicitPatterns) {
         const match = clean.match(pattern);
-        if (match) return match[1];
-    }
-
-    const numbers = [...clean.matchAll(/\d{2,}/g)].map((m) => m[0]);
-    if (numbers.length > 0) {
-        return numbers[numbers.length - 1];
-    }
-
+        if (match) {
+            const value = match[1];
+            const numbers = [...String(value).matchAll(/\d+/g)].map((m) => m[0]);
+            if (numbers.length > 0) return numbers[numbers.length - 1];
+        }
     return null;
 }
 
