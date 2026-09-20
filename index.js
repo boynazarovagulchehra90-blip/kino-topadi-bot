@@ -84,16 +84,28 @@ function normalizeMovieKey(key) {
   return /^\d+$/.test(plain) ? plain : null;
 }
 
+async function getNextAvailableCode() {
+  const db = await readDB();
+  const numericKeys = Object.keys(db)
+    .map((key) => Number(key))
+    .filter((value) => Number.isInteger(value) && value > 0);
+
+  return numericKeys.length > 0 ? Math.max(...numericKeys) + 1 : 1;
+}
+
 async function saveMovieByKey(key, messageId) {
   const db = await readDB();
-  const cleanedKey = normalizeMovieKey(key);
-  if (!cleanedKey) return false;
+  let cleanedKey = normalizeMovieKey(key);
+
+  if (!cleanedKey) {
+    cleanedKey = String(await getNextAvailableCode());
+  }
 
   if (db[cleanedKey] !== undefined) return false;
 
   db[cleanedKey] = Number(messageId);
   await writeDB(db);
-  return true;
+  return cleanedKey;
 }
 
 async function getMovieByKey(key) {
@@ -183,9 +195,12 @@ bot.on('channel_post', async (ctx) => {
     return;
   }
 
-  const key = `${post.chat.id}:${post.message_id}`;
-  channelPendingSave.set(key, post.message_id);
-  await ctx.telegram.sendMessage(post.chat.id, 'Bu videoning kodi keyinchalik /save 101 yoki /kod 101 bilan biriktiriladi.');
+  const nextCode = await saveMovieByKey(null, post.message_id);
+  if (nextCode) {
+    await ctx.telegram.sendMessage(post.chat.id, `✅ Kino avtomatik saqlandi. Kod: ${nextCode}`);
+  } else {
+    await ctx.telegram.sendMessage(post.chat.id, '⚠️ Kino saqlanmadi. Qayta urinib ko‘ring.');
+  }
 });
 
 bot.on('edited_channel_post', async (ctx) => {

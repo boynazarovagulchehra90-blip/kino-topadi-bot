@@ -19,12 +19,23 @@ async function getDB() {
     }
 }
 
+async function getNextAvailableCode() {
+    const db = await getDB();
+    const numericKeys = Object.keys(db)
+        .map((key) => Number(key))
+        .filter((value) => Number.isInteger(value) && value > 0);
+
+    return numericKeys.length > 0 ? Math.max(...numericKeys) + 1 : 1;
+}
+
 async function saveToDB(code, messageId) {
     const db = await getDB();
-    if (db[code] !== undefined) return false;
-    db[code] = messageId;
+    const finalCode = code && String(code).trim() ? String(code) : String(await getNextAvailableCode());
+
+    if (db[finalCode] !== undefined) return false;
+    db[finalCode] = messageId;
     await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2));
-    return true;
+    return finalCode;
 }
 
 async function getFromDB(code) {
