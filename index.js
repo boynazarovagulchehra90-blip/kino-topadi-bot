@@ -64,16 +64,12 @@ function normalizeMovieKey(key) {
   const explicit = text.match(/(?:^|\s|[\W_])(?:kod|code|kino|film|movie)\s*[:\-]?\s*([a-zA-Z0-9\-\s]{1,50})/i);
   if (explicit && explicit[1]) {
     const cleaned = explicit[1].trim();
-    if (cleaned) return cleaned;
+    if (/^\d+$/.test(cleaned)) return cleaned;
+    return null;
   }
 
   const plain = text.replace(/^(?:kod|code|kino|film|movie)\s*[:\-]?\s*/i, '').trim();
-  if (plain) return plain;
-
-  const digits = text.match(/\d+/g);
-  if (digits && digits.length > 0) return digits[digits.length - 1];
-
-  return text;
+  return /^\d+$/.test(plain) ? plain : null;
 }
 
 async function saveMovieByKey(key, messageId) {
@@ -94,7 +90,7 @@ async function getMovieByKey(key) {
 }
 
 bot.start((ctx) => {
-  ctx.reply('Xush kelibsiz! Kino qidirish uchun raqam yoki istalgan nomni yozing. Kino saqlash uchun video/document yuboring yoki /save 101 deb yozing.');
+  ctx.reply('Xush kelibsiz! Kino qidirish uchun faqat raqamli kod yuboring. Kino saqlash uchun video/document yuboring yoki /save 101 deb yozing.');
 });
 
 bot.command('save', async (ctx) => {
@@ -103,7 +99,7 @@ bot.command('save', async (ctx) => {
   const reply = ctx.message.reply_to_message;
 
   if (!key) {
-    await ctx.reply('Namuna: /save 101 yoki /save sherlok');
+    await ctx.reply('Namuna: /save 101');
     return;
   }
 
@@ -146,7 +142,7 @@ bot.on(['video', 'document'], async (ctx) => {
     type: message.video ? 'video' : 'document',
   });
 
-  await ctx.reply('Bu kinoni bazada qaysi raqam yoki so\'z bilan saqlamoqchisiz? Masalan: 101 yoki "sherlok". Agar kanalga allaqachon qo\'yilgan video bo\'lsa, /save 101 deb yozing.');
+  await ctx.reply('Bu kinoni bazada qaysi raqamli kod bilan saqlamoqchisiz? Masalan: 101. Agar kanalga allaqachon qo\'yilgan video bo\'lsa, /save 101 deb yozing.');
 });
 
 bot.on('channel_post', async (ctx) => {
@@ -185,7 +181,7 @@ bot.on('text', async (ctx) => {
     const key = normalizeMovieKey(text);
 
     if (!key) {
-      await ctx.reply('Iltimos, saqlash uchun raqam yoki istalgan nom yozing.');
+      await ctx.reply('Iltimos, saqlash uchun faqat raqamli kod yozing.');
       return;
     }
 
