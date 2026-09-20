@@ -116,6 +116,21 @@ async function getMovieByKey(key) {
   return db[cleanedKey] ?? db[String(cleanedKey)] ?? undefined;
 }
 
+async function deleteMovieByKey(key) {
+  const db = await readDB();
+  const cleanedKey = normalizeMovieKey(key);
+  if (!cleanedKey) return false;
+
+  if (db[cleanedKey] === undefined && db[String(cleanedKey)] === undefined) {
+    return false;
+  }
+
+  delete db[cleanedKey];
+  delete db[String(cleanedKey)];
+  await writeDB(db);
+  return true;
+}
+
 bot.start((ctx) => {
   ctx.reply('Xush kelibsiz! Kino qidirish uchun faqat raqamli kod yuboring. Kino saqlash uchun video/document yuboring yoki /save 101 deb yozing.');
 });
@@ -187,19 +202,15 @@ bot.on('channel_post', async (ctx) => {
   const code = normalizeMovieKey(post.caption || '');
   if (code) {
     const saved = await saveMovieByKey(code, post.message_id);
-    if (saved) {
-      await ctx.telegram.sendMessage(post.chat.id, `✅ Kino kodi saqlandi: ${code}`);
-    } else {
-      await ctx.telegram.sendMessage(post.chat.id, `⚠️ Bu kod allaqachon mavjud: ${code}`);
+    if (!saved) {
+      console.log(`Takroriy kod qoldirildi: ${code}`);
     }
     return;
   }
 
   const nextCode = await saveMovieByKey(null, post.message_id);
   if (nextCode) {
-    await ctx.telegram.sendMessage(post.chat.id, `✅ Kino avtomatik saqlandi. Kod: ${nextCode}`);
-  } else {
-    await ctx.telegram.sendMessage(post.chat.id, '⚠️ Kino saqlanmadi. Qayta urinib ko‘ring.');
+    console.log(`Avtomatik saqlandi: ${nextCode}`);
   }
 });
 
@@ -210,10 +221,8 @@ bot.on('edited_channel_post', async (ctx) => {
   const code = normalizeMovieKey(post.caption || '');
   if (code) {
     const saved = await saveMovieByKey(code, post.message_id);
-    if (saved) {
-      await ctx.telegram.sendMessage(post.chat.id, `✅ Kino kodi saqlandi: ${code}`);
-    } else {
-      await ctx.telegram.sendMessage(post.chat.id, `⚠️ Bu kod allaqachon mavjud: ${code}`);
+    if (!saved) {
+      console.log(`Takroriy kod qoldirildi: ${code}`);
     }
   }
 });
@@ -283,6 +292,14 @@ bot.on('text', async (ctx) => {
     await ctx.telegram.copyMessage(ctx.chat.id, sourceChatId, Number(messageId));
   } catch (error) {
     console.error('Copy message xatosi:', error);
+    const msg = String(error?.description || error?.message || '');
+
+    if (msg.includes('message to copy not found') || msg.includes('message not found')) {
+      await deleteMovieByKey(text);
+      await ctx.reply('Bu kino kanaldan o\'chirilgan. Kod bazasi tozalandı va keyingi urinishda yangisi ishlatiladi.');
+      return;
+    }
+
     await ctx.reply(`Kino topildi, lekin uni ko\'chirishda xatolik yuz berdi. Message ID: ${messageId}`);
   }
 });
