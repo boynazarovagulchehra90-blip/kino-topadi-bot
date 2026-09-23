@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { Telegraf } from 'telegraf';
+import { Markup, Telegraf } from 'telegraf';
 import express from 'express';
 import fs from 'fs/promises';
 import path from 'path';
@@ -8,6 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const SOURCE_CHANNEL_ID = process.env.CHANNEL_ID;
+const REQUIRED_CHANNEL = process.env.REQUIRED_CHANNEL;
 
 if (!BOT_TOKEN) {
   throw new Error('BOT_TOKEN topilmadi. .env faylida BOT_TOKEN o\'rnating.');
@@ -103,6 +104,14 @@ function isAdmin(ctx) {
   return process.env.ADMIN_ID && String(ctx.from?.id) === String(process.env.ADMIN_ID).trim();
 }
 
+function getRequiredChannelUrl() {
+  if (process.env.REQUIRED_CHANNEL_URL) return process.env.REQUIRED_CHANNEL_URL;
+  if (REQUIRED_CHANNEL?.startsWith('@')) {
+    return `https://t.me/${REQUIRED_CHANNEL.slice(1)}`;
+  }
+  return `https://t.me/c/${REQUIRED_CHANNEL.replace('-100', '')}/1`;
+}
+
 function normalizeMovieKey(key) {
   if (key === null || key === undefined) return null;
 
@@ -178,7 +187,13 @@ bot.start(async (ctx) => {
 
   const userCount = await getUserCount();
   await updateBotDescription(userCount);
-  return ctx.reply(`Xush kelibsiz!\n\nBotdagi jami obunachilar: ${userCount}\n\nKino qidirish uchun faqat raqamli kod yuboring. Kino saqlash uchun video/document yuboring yoki /save 101 deb yozing.`);
+  await ctx.reply(`Xush kelibsiz!\n\nBotdagi jami obunachilar: ${userCount}\n\nKino qidirish uchun faqat raqamli kod yuboring. Kino saqlash uchun video/document yuboring yoki /save 101 deb yozing.`);
+
+  if (REQUIRED_CHANNEL) {
+    await ctx.reply('Botdan foydalanish uchun avval kanalimizga obuna bo\'ling:', Markup.inlineKeyboard([
+      Markup.button.url('Kanalga obuna bo\'lish', getRequiredChannelUrl()),
+    ]));
+  }
 });
 
 bot.command('stat', async (ctx) => {

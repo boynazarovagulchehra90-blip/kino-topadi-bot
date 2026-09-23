@@ -14,6 +14,9 @@ Bu bot sizning Telegram kanalidagi videolarni kod bo'yicha topib, foydalanuvchig
 ```env
 BOT_TOKEN=your_telegram_bot_token
 CHANNEL_ID=-1001234567890
+REQUIRED_CHANNEL=@your_channel
+# Private kanal bo'lsa, invite linkini yozing:
+# REQUIRED_CHANNEL_URL=https://t.me/+your_invite_link
 ADMIN_ID=123456789
 PORT=3000
 ```

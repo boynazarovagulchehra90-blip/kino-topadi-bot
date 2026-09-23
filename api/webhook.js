@@ -7,6 +7,7 @@ const bot = new Bot(process.env.BOT_TOKEN);
 
 const CHANNEL_ID = process.env.CHANNEL_ID;
 const REQUIRED_CHANNEL = process.env.REQUIRED_CHANNEL;
+const REQUIRED_CHANNEL_URL = process.env.REQUIRED_CHANNEL_URL;
 
 const DB_PATH = path.join(process.cwd(), 'database.json');
 
@@ -51,6 +52,14 @@ async function updateBotDescription(userCount) {
     } catch (error) {
         console.error('Bot description yangilanmadi:', error);
     }
+}
+
+function getRequiredChannelUrl() {
+    if (REQUIRED_CHANNEL_URL) return REQUIRED_CHANNEL_URL;
+    if (REQUIRED_CHANNEL.startsWith('@')) {
+        return `https://t.me/${REQUIRED_CHANNEL.replace('@', '')}`;
+    }
+    return 'https://t.me/c/' + REQUIRED_CHANNEL.replace('-100', '') + '/1';
 }
 
 function isAdmin(ctx) {
@@ -120,9 +129,7 @@ async function checkSubscription(ctx, next) {
         if (['member', 'administrator', 'creator'].includes(member.status)) {
             return next();
         } else {
-            const channelUrl = REQUIRED_CHANNEL.startsWith('@') 
-                ? `https://t.me/${REQUIRED_CHANNEL.replace('@', '')}` 
-                : 'https://t.me/c/' + REQUIRED_CHANNEL.replace('-100', '') + '/1';
+            const channelUrl = getRequiredChannelUrl();
 
             const keyboard = new InlineKeyboard()
                 .url(REQUIRED_CHANNEL, channelUrl)
@@ -190,9 +197,7 @@ bot.command('start', async (ctx) => {
             const member = await ctx.api.getChatMember(REQUIRED_CHANNEL, userId);
             
             if (!['member', 'administrator', 'creator'].includes(member.status)) {
-                const channelUrl = REQUIRED_CHANNEL.startsWith('@') 
-                    ? `https://t.me/${REQUIRED_CHANNEL.replace('@', '')}` 
-                    : 'https://t.me/c/' + REQUIRED_CHANNEL.replace('-100', '') + '/1';
+                const channelUrl = getRequiredChannelUrl();
 
                 const keyboard = new InlineKeyboard()
                     .url(REQUIRED_CHANNEL, channelUrl)
