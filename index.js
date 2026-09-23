@@ -166,7 +166,8 @@ bot.start(async (ctx) => {
     console.error('Foydalanuvchini saqlashda xatolik:', error);
   }
 
-  return ctx.reply('Xush kelibsiz! Kino qidirish uchun faqat raqamli kod yuboring. Kino saqlash uchun video/document yuboring yoki /save 101 deb yozing.');
+  const userCount = await getUserCount();
+  return ctx.reply(`Xush kelibsiz!\n\nBotdagi jami obunachilar: ${userCount}\n\nKino qidirish uchun faqat raqamli kod yuboring. Kino saqlash uchun video/document yuboring yoki /save 101 deb yozing.`);
 });
 
 bot.command('stat', async (ctx) => {

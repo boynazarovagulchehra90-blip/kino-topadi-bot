@@ -169,7 +169,7 @@ bot.callbackQuery('check_sub', async (ctx) => {
 
 bot.command('start', async (ctx) => {
     await saveUser(ctx.from);
-    await ctx.reply('Assalomu alaykum! Kino kodini yuboring va men sizga kinoni tashlab beraman.');
+    await ctx.reply(`Assalomu alaykum!\n\nBotdagi jami obunachilar: ${await getUserCount()}\n\nKino kodini yuboring va men sizga kinoni tashlab beraman.`);
     
     // Obunani shu yerda tekshiramiz
     if (REQUIRED_CHANNEL) {
