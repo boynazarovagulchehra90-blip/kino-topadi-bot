@@ -19,6 +19,34 @@ async function getDB() {
     }
 }
 
+async function saveUser(user) {
+    const db = await getDB();
+    if (!db.users || typeof db.users !== 'object' || Array.isArray(db.users)) {
+        db.users = {};
+    }
+
+    const userId = String(user.id);
+    if (db.users[userId]) return false;
+
+    db.users[userId] = {
+        user_id: user.id,
+        username: user.username || null,
+    };
+    await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2));
+    return true;
+}
+
+async function getUserCount() {
+    const db = await getDB();
+    return db.users && typeof db.users === 'object' && !Array.isArray(db.users)
+        ? Object.keys(db.users).length
+        : 0;
+}
+
+function isAdmin(ctx) {
+    return process.env.ADMIN_ID && String(ctx.from?.id) === String(process.env.ADMIN_ID).trim();
+}
+
 async function getNextAvailableCode() {
     const db = await getDB();
     const numericKeys = Object.keys(db)
@@ -140,6 +168,7 @@ bot.callbackQuery('check_sub', async (ctx) => {
 });
 
 bot.command('start', async (ctx) => {
+    await saveUser(ctx.from);
     await ctx.reply('Assalomu alaykum! Kino kodini yuboring va men sizga kinoni tashlab beraman.');
     
     // Obunani shu yerda tekshiramiz
@@ -166,6 +195,15 @@ bot.command('start', async (ctx) => {
             console.error('Subscription check error in /start:', error);
         }
     }
+});
+
+bot.command('stat', async (ctx) => {
+    if (!isAdmin(ctx)) {
+        await ctx.reply('Bu buyruq faqat bot admini uchun mavjud.');
+        return;
+    }
+
+    await ctx.reply(`Botdagi jami obunachilar: ${await getUserCount()}`);
 });
 
 bot.on('message:text', checkSubscription, async (ctx) => {

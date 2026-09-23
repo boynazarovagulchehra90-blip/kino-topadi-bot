@@ -14,6 +14,7 @@ Bu bot sizning Telegram kanalidagi videolarni kod bo'yicha topib, foydalanuvchig
 ```env
 BOT_TOKEN=your_telegram_bot_token
 CHANNEL_ID=-1001234567890
+ADMIN_ID=123456789
 PORT=3000
 ```
 
@@ -31,3 +32,13 @@ PORT=3000
 - `/save 101` yoki `/kod 101` komandasi ishlatiladi.
 - Video ustiga javob berib ham kod qo'shish mumkin.
 - Bot kanal videolarini kod bo'yicha topib beradi.
+
+## Foydalanuvchilar statistikasi
+
+1. Telegram'da `@userinfobot` yoki boshqa ishonchli usul orqali o'z Telegram `user_id` raqamingizni oling.
+2. `.env` faylidagi `ADMIN_ID` qiymatiga shu raqamni yozing.
+3. Paketlar o'rnatilmagan bo'lsa, `npm install` buyrug'ini bajaring.
+4. Botga `/start` yuborgan har bir foydalanuvchi `database.json` faylining `users` bo'limiga bir marta saqlanadi. Takroriy `/start` yangi yozuv yaratmaydi.
+5. Admin botga `/stat` yuborsa, jami saqlangan foydalanuvchilar soni chiqadi. Boshqa foydalanuvchilarga bu buyruq bajarilmaydi.
+
+`database.json` kino kodlarini yuqori darajadagi raqamli kalitlarda, foydalanuvchilarni esa `users` obyektida saqlaydi. Mavjud kino ma'lumotlari o'zgarmaydi.

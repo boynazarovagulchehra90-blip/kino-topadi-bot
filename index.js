@@ -65,6 +65,34 @@ async function writeDB(data) {
   await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2));
 }
 
+async function saveUser(user) {
+  const db = await readDB();
+  if (!db.users || typeof db.users !== 'object' || Array.isArray(db.users)) {
+    db.users = {};
+  }
+
+  const userId = String(user.id);
+  if (db.users[userId]) return false;
+
+  db.users[userId] = {
+    user_id: user.id,
+    username: user.username || null,
+  };
+  await writeDB(db);
+  return true;
+}
+
+async function getUserCount() {
+  const db = await readDB();
+  return db.users && typeof db.users === 'object' && !Array.isArray(db.users)
+    ? Object.keys(db.users).length
+    : 0;
+}
+
+function isAdmin(ctx) {
+  return process.env.ADMIN_ID && String(ctx.from?.id) === String(process.env.ADMIN_ID).trim();
+}
+
 function normalizeMovieKey(key) {
   if (key === null || key === undefined) return null;
 
@@ -131,8 +159,23 @@ async function deleteMovieByKey(key) {
   return true;
 }
 
-bot.start((ctx) => {
-  ctx.reply('Xush kelibsiz! Kino qidirish uchun faqat raqamli kod yuboring. Kino saqlash uchun video/document yuboring yoki /save 101 deb yozing.');
+bot.start(async (ctx) => {
+  try {
+    await saveUser(ctx.from);
+  } catch (error) {
+    console.error('Foydalanuvchini saqlashda xatolik:', error);
+  }
+
+  return ctx.reply('Xush kelibsiz! Kino qidirish uchun faqat raqamli kod yuboring. Kino saqlash uchun video/document yuboring yoki /save 101 deb yozing.');
+});
+
+bot.command('stat', async (ctx) => {
+  if (!isAdmin(ctx)) {
+    await ctx.reply('Bu buyruq faqat bot admini uchun mavjud.');
+    return;
+  }
+
+  await ctx.reply(`Botdagi jami obunachilar: ${await getUserCount()}`);
 });
 
 bot.command('save', async (ctx) => {
