@@ -131,7 +131,8 @@ async function isSubscribed(ctx) {
 
 async function askForSubscription(ctx) {
   await ctx.reply('Botdan foydalanish uchun avval kanalimizga obuna bo\'ling:', Markup.inlineKeyboard([
-    Markup.button.url('Kanalga obuna bo\'lish', getRequiredChannelUrl()),
+    [Markup.button.url('Kanalga obuna bo\'lish', getRequiredChannelUrl())],
+    [Markup.button.callback('Obunani tekshirish', 'check_sub')],
   ]));
 }
 
