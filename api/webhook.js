@@ -62,6 +62,11 @@ function getRequiredChannelUrl() {
     return 'https://t.me/c/' + REQUIRED_CHANNEL.replace('-100', '') + '/1';
 }
 
+function isActiveMember(member) {
+    return ['member', 'administrator', 'creator'].includes(member.status)
+        || (member.status === 'restricted' && member.is_member === true);
+}
+
 function isAdmin(ctx) {
     return process.env.ADMIN_ID && String(ctx.from?.id) === String(process.env.ADMIN_ID).trim();
 }
@@ -126,7 +131,7 @@ async function checkSubscription(ctx, next) {
         const userId = ctx.from.id;
         const member = await ctx.api.getChatMember(REQUIRED_CHANNEL, userId);
         
-        if (['member', 'administrator', 'creator'].includes(member.status)) {
+        if (isActiveMember(member)) {
             return next();
         } else {
             const channelUrl = getRequiredChannelUrl();
@@ -172,7 +177,7 @@ bot.callbackQuery('check_sub', async (ctx) => {
         const userId = ctx.from.id;
         const member = await ctx.api.getChatMember(REQUIRED_CHANNEL, userId);
         
-        if (['member', 'administrator', 'creator'].includes(member.status)) {
+        if (isActiveMember(member)) {
             await ctx.answerCallbackQuery({ text: 'Obuna tasdiqlandi! Endi kino kodini yuborishingiz mumkin.', show_alert: true });
             await ctx.deleteMessage();
         } else {
@@ -195,7 +200,7 @@ bot.command('start', async (ctx) => {
             const userId = ctx.from.id;
             const member = await ctx.api.getChatMember(REQUIRED_CHANNEL, userId);
             
-            if (!['member', 'administrator', 'creator'].includes(member.status)) {
+            if (!isActiveMember(member)) {
                 const channelUrl = getRequiredChannelUrl();
 
                 const keyboard = new InlineKeyboard()

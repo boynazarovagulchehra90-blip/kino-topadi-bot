@@ -112,12 +112,17 @@ function getRequiredChannelUrl() {
   return `https://t.me/c/${REQUIRED_CHANNEL.replace('-100', '')}/1`;
 }
 
+function isActiveMember(member) {
+  return ['member', 'administrator', 'creator'].includes(member.status)
+    || (member.status === 'restricted' && member.is_member === true);
+}
+
 async function isSubscribed(ctx) {
   if (!REQUIRED_CHANNEL) return true;
 
   try {
     const member = await ctx.telegram.getChatMember(REQUIRED_CHANNEL, ctx.from.id);
-    return ['member', 'administrator', 'creator'].includes(member.status);
+    return isActiveMember(member);
   } catch (error) {
     console.error('Obunani tekshirishda xatolik:', error);
     return false;
