@@ -112,30 +112,6 @@ function getRequiredChannelUrl() {
   return `https://t.me/c/${REQUIRED_CHANNEL.replace('-100', '')}/1`;
 }
 
-function isActiveMember(member) {
-  return ['member', 'administrator', 'creator'].includes(member.status)
-    || (member.status === 'restricted' && member.is_member === true);
-}
-
-async function isSubscribed(ctx) {
-  if (!REQUIRED_CHANNEL) return true;
-
-  try {
-    const member = await ctx.telegram.getChatMember(REQUIRED_CHANNEL, ctx.from.id);
-    return isActiveMember(member);
-  } catch (error) {
-    console.error('Obunani tekshirishda xatolik:', error);
-    return false;
-  }
-}
-
-async function askForSubscription(ctx) {
-  await ctx.reply('Botdan foydalanish uchun avval kanalimizga obuna bo\'ling:', Markup.inlineKeyboard([
-    [Markup.button.url('Kanalga obuna bo\'lish', getRequiredChannelUrl())],
-    [Markup.button.callback('Obunani tekshirish', 'check_sub')],
-  ]));
-}
-
 function normalizeMovieKey(key) {
   if (key === null || key === undefined) return null;
 
@@ -211,8 +187,6 @@ bot.start(async (ctx) => {
 
   await updateBotDescription();
   await ctx.reply('Xush kelibsiz!\n\nKino qidirish uchun raqamli kod yuboring.');
-
-  if (!(await isSubscribed(ctx))) await askForSubscription(ctx);
 });
 
 bot.command('stat', async (ctx) => {
@@ -317,11 +291,6 @@ bot.on('edited_channel_post', async (ctx) => {
 });
 
 bot.on('text', async (ctx) => {
-  if (!(await isSubscribed(ctx))) {
-    await askForSubscription(ctx);
-    return;
-  }
-
   const text = ctx.message.text.trim();
   const chatId = String(ctx.chat.id);
 
@@ -395,19 +364,6 @@ bot.on('text', async (ctx) => {
     }
 
     await ctx.reply(`Kino topildi, lekin uni ko\'chirishda xatolik yuz berdi. Message ID: ${messageId}`);
-  }
-});
-
-bot.action('check_sub', async (ctx) => {
-  try {
-    await ctx.answerCbQuery();
-    if (await isSubscribed(ctx)) {
-      await ctx.reply('Obuna tasdiqlandi! Endi kino kodini yuboring.');
-    } else {
-      await askForSubscription(ctx);
-    }
-  } catch (error) {
-    console.error('Callback xatoligi:', error);
   }
 });
 

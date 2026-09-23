@@ -124,33 +124,6 @@ function extractVideoCode(caption) {
     return null;
 }
 
-async function checkSubscription(ctx, next) {
-    if (!REQUIRED_CHANNEL) return next();
-    
-    try {
-        const userId = ctx.from.id;
-        const member = await ctx.api.getChatMember(REQUIRED_CHANNEL, userId);
-        
-        if (isActiveMember(member)) {
-            return next();
-        } else {
-            const channelUrl = getRequiredChannelUrl();
-
-            const keyboard = new InlineKeyboard()
-                .url(REQUIRED_CHANNEL, channelUrl)
-                .row()
-                .text('Obunani tasdiqlash', 'check_sub');
-                
-            await ctx.reply('Botdan foydalanish uchun quyidagi kanalga obuna bo\'lishingiz majburiy!', {
-                reply_markup: keyboard
-            });
-        }
-    } catch (error) {
-        console.error('Subscription check error:', error);
-        await ctx.reply(`Obunani tekshirishda xatolik yuz berdi. Bot kanalda admin ekanligini tekshiring: ${REQUIRED_CHANNEL}`);
-    }
-}
-
 bot.on(['channel_post', 'edited_channel_post'], async (ctx) => {
     const msg = ctx.channelPost || ctx.editedChannelPost;
     
@@ -172,50 +145,10 @@ bot.on(['channel_post', 'edited_channel_post'], async (ctx) => {
     }
 });
 
-bot.callbackQuery('check_sub', async (ctx) => {
-    try {
-        const userId = ctx.from.id;
-        const member = await ctx.api.getChatMember(REQUIRED_CHANNEL, userId);
-        
-        if (isActiveMember(member)) {
-            await ctx.answerCallbackQuery({ text: 'Obuna tasdiqlandi! Endi kino kodini yuborishingiz mumkin.', show_alert: true });
-            await ctx.deleteMessage();
-        } else {
-            await ctx.answerCallbackQuery({ text: 'Hali obuna bo\'lmagansiz! Iltimos, kanalga a\'zo bo\'ling.', show_alert: true });
-        }
-    } catch (error) {
-        console.error('Callback error:', error);
-        await ctx.answerCallbackQuery({ text: 'Xatolik yuz berdi.', show_alert: true });
-    }
-});
-
 bot.command('start', async (ctx) => {
     await saveUser(ctx.from);
     await updateBotDescription();
     await ctx.reply('Assalomu alaykum!\n\nKino kodini yuboring va men sizga kinoni tashlab beraman.');
-    
-    // Obunani shu yerda tekshiramiz
-    if (REQUIRED_CHANNEL) {
-        try {
-            const userId = ctx.from.id;
-            const member = await ctx.api.getChatMember(REQUIRED_CHANNEL, userId);
-            
-            if (!isActiveMember(member)) {
-                const channelUrl = getRequiredChannelUrl();
-
-                const keyboard = new InlineKeyboard()
-                    .url(REQUIRED_CHANNEL, channelUrl)
-                    .row()
-                    .text('Obunani tasdiqlash', 'check_sub');
-                    
-                await ctx.reply('Botdan to\'liq foydalanish uchun quyidagi kanalga obuna bo\'lishingiz majburiy!', {
-                    reply_markup: keyboard
-                });
-            }
-        } catch (error) {
-            console.error('Subscription check error in /start:', error);
-        }
-    }
 });
 
 bot.command('stat', async (ctx) => {
@@ -227,7 +160,7 @@ bot.command('stat', async (ctx) => {
     await ctx.reply(`Botdagi jami obunachilar: ${await getUserCount()}`);
 });
 
-bot.on('message:text', checkSubscription, async (ctx) => {
+bot.on('message:text', async (ctx) => {
     const code = ctx.message.text.trim();
     
     if (!/^\d+$/.test(code)) {
