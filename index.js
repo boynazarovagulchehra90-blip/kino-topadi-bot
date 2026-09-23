@@ -89,6 +89,16 @@ async function getUserCount() {
     : 0;
 }
 
+async function updateBotDescription(userCount) {
+  try {
+    await bot.telegram.callApi('setMyDescription', {
+      description: `Obunachilar: ${userCount}\nKino kodini yuboring va kinoni oling.`,
+    });
+  } catch (error) {
+    console.error('Bot description yangilanmadi:', error);
+  }
+}
+
 function isAdmin(ctx) {
   return process.env.ADMIN_ID && String(ctx.from?.id) === String(process.env.ADMIN_ID).trim();
 }
@@ -167,6 +177,7 @@ bot.start(async (ctx) => {
   }
 
   const userCount = await getUserCount();
+  await updateBotDescription(userCount);
   return ctx.reply(`Xush kelibsiz!\n\nBotdagi jami obunachilar: ${userCount}\n\nKino qidirish uchun faqat raqamli kod yuboring. Kino saqlash uchun video/document yuboring yoki /save 101 deb yozing.`);
 });
 

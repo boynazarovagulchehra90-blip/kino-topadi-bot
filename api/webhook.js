@@ -43,6 +43,16 @@ async function getUserCount() {
         : 0;
 }
 
+async function updateBotDescription(userCount) {
+    try {
+        await bot.api.setMyDescription({
+            description: `Obunachilar: ${userCount}\nKino kodini yuboring va kinoni oling.`,
+        });
+    } catch (error) {
+        console.error('Bot description yangilanmadi:', error);
+    }
+}
+
 function isAdmin(ctx) {
     return process.env.ADMIN_ID && String(ctx.from?.id) === String(process.env.ADMIN_ID).trim();
 }
@@ -169,7 +179,9 @@ bot.callbackQuery('check_sub', async (ctx) => {
 
 bot.command('start', async (ctx) => {
     await saveUser(ctx.from);
-    await ctx.reply(`Assalomu alaykum!\n\nBotdagi jami obunachilar: ${await getUserCount()}\n\nKino kodini yuboring va men sizga kinoni tashlab beraman.`);
+    const userCount = await getUserCount();
+    await updateBotDescription(userCount);
+    await ctx.reply(`Assalomu alaykum!\n\nBotdagi jami obunachilar: ${userCount}\n\nKino kodini yuboring va men sizga kinoni tashlab beraman.`);
     
     // Obunani shu yerda tekshiramiz
     if (REQUIRED_CHANNEL) {
