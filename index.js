@@ -90,10 +90,10 @@ async function getUserCount() {
     : 0;
 }
 
-async function updateBotDescription(userCount) {
+async function updateBotDescription() {
   try {
     await bot.telegram.callApi('setMyDescription', {
-      description: `Obunachilar: ${userCount}\nKino kodini yuboring va kinoni oling.`,
+      description: 'Kino kodini yuboring va kinoni oling.',
     });
   } catch (error) {
     console.error('Bot description yangilanmadi:', error);
@@ -110,6 +110,24 @@ function getRequiredChannelUrl() {
     return `https://t.me/${REQUIRED_CHANNEL.slice(1)}`;
   }
   return `https://t.me/c/${REQUIRED_CHANNEL.replace('-100', '')}/1`;
+}
+
+async function isSubscribed(ctx) {
+  if (!REQUIRED_CHANNEL) return true;
+
+  try {
+    const member = await ctx.telegram.getChatMember(REQUIRED_CHANNEL, ctx.from.id);
+    return ['member', 'administrator', 'creator'].includes(member.status);
+  } catch (error) {
+    console.error('Obunani tekshirishda xatolik:', error);
+    return false;
+  }
+}
+
+async function askForSubscription(ctx) {
+  await ctx.reply('Botdan foydalanish uchun avval kanalimizga obuna bo\'ling:', Markup.inlineKeyboard([
+    Markup.button.url('Kanalga obuna bo\'lish', getRequiredChannelUrl()),
+  ]));
 }
 
 function normalizeMovieKey(key) {
@@ -185,15 +203,10 @@ bot.start(async (ctx) => {
     console.error('Foydalanuvchini saqlashda xatolik:', error);
   }
 
-  const userCount = await getUserCount();
-  await updateBotDescription(userCount);
-  await ctx.reply(`Xush kelibsiz!\n\nBotdagi jami obunachilar: ${userCount}\n\nKino qidirish uchun faqat raqamli kod yuboring. Kino saqlash uchun video/document yuboring yoki /save 101 deb yozing.`);
+  await updateBotDescription();
+  await ctx.reply('Xush kelibsiz!\n\nKino qidirish uchun raqamli kod yuboring.');
 
-  if (REQUIRED_CHANNEL) {
-    await ctx.reply('Botdan foydalanish uchun avval kanalimizga obuna bo\'ling:', Markup.inlineKeyboard([
-      Markup.button.url('Kanalga obuna bo\'lish', getRequiredChannelUrl()),
-    ]));
-  }
+  if (!(await isSubscribed(ctx))) await askForSubscription(ctx);
 });
 
 bot.command('stat', async (ctx) => {
@@ -298,6 +311,11 @@ bot.on('edited_channel_post', async (ctx) => {
 });
 
 bot.on('text', async (ctx) => {
+  if (!(await isSubscribed(ctx))) {
+    await askForSubscription(ctx);
+    return;
+  }
+
   const text = ctx.message.text.trim();
   const chatId = String(ctx.chat.id);
 
@@ -377,7 +395,11 @@ bot.on('text', async (ctx) => {
 bot.action('check_sub', async (ctx) => {
   try {
     await ctx.answerCbQuery();
-    await ctx.reply('Obuna tekshirildi!');
+    if (await isSubscribed(ctx)) {
+      await ctx.reply('Obuna tasdiqlandi! Endi kino kodini yuboring.');
+    } else {
+      await askForSubscription(ctx);
+    }
   } catch (error) {
     console.error('Callback xatoligi:', error);
   }

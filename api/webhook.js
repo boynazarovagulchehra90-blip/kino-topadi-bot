@@ -44,10 +44,10 @@ async function getUserCount() {
         : 0;
 }
 
-async function updateBotDescription(userCount) {
+async function updateBotDescription() {
     try {
         await bot.api.setMyDescription({
-            description: `Obunachilar: ${userCount}\nKino kodini yuboring va kinoni oling.`,
+            description: 'Kino kodini yuboring va kinoni oling.',
         });
     } catch (error) {
         console.error('Bot description yangilanmadi:', error);
@@ -186,9 +186,8 @@ bot.callbackQuery('check_sub', async (ctx) => {
 
 bot.command('start', async (ctx) => {
     await saveUser(ctx.from);
-    const userCount = await getUserCount();
-    await updateBotDescription(userCount);
-    await ctx.reply(`Assalomu alaykum!\n\nBotdagi jami obunachilar: ${userCount}\n\nKino kodini yuboring va men sizga kinoni tashlab beraman.`);
+    await updateBotDescription();
+    await ctx.reply('Assalomu alaykum!\n\nKino kodini yuboring va men sizga kinoni tashlab beraman.');
     
     // Obunani shu yerda tekshiramiz
     if (REQUIRED_CHANNEL) {
